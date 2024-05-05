@@ -3,5 +3,7 @@ from typing import List
 
 
 class GatewaySettings(MosaicBaseSettings):
-    host: str
-    port: int
+    """Configuration settings for the basic Gateway."""
+
+    host: str = "0.0.0.0"
+    port: int = 8080

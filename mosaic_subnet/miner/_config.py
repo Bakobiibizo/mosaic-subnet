@@ -1,8 +1,9 @@
 from mosaic_subnet.base.config import MosaicBaseSettings
-from typing import List
 
 
 class MinerSettings(MosaicBaseSettings):
-    host: str
-    port: int
-    model: str = "stabilityai/sdxl-turbo"
+    """Configuration settings for the basic Miner."""
+
+    host: str = "0.0.0.0"
+    port: int = 8888
+    model: str = "Lykon/dreamshaper-xl-v2-turbo"

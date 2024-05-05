@@ -1,22 +1,15 @@
 import time
 import asyncio
 import concurrent.futures
-import time
-from functools import partial
-from dataclasses import dataclass
 
+from functools import partial
 from loguru import logger
-from PIL import UnidentifiedImageError
+from typing import Iterator, Literal
+from substrateinterface import Keypair
 
 from communex.module.module import Module
 from communex.client import CommuneClient
-from communex.module.client import ModuleClient
-from communex.compat.key import check_ss58_address
-from communex.types import Ss58Address
-from substrateinterface import Keypair
-from communex.key import generate_keypair
 from communex._common import get_node_url
-from communex.client import CommuneClient
 from communex.compat.key import classic_load_key
 
 from mosaic_subnet.validator._config import ValidatorSettings
@@ -28,59 +21,108 @@ from mosaic_subnet.validator.sigmoid import threshold_sigmoid_reward_distributio
 
 
 class Validator(BaseValidator, Module):
-    def __init__(self, key: Keypair, settings: ValidatorSettings | None = None) -> None:
+    """Validator class for classification of miner images."""
+
+    def __init__(self, key: Keypair, config: ValidatorSettings) -> None:
+        """
+        Initializes a new instance of the Validator class.
+
+        Parameters:
+            key (Keypair): The keypair used for the Validator.
+            config (ValidatorSettings): The configuration settings for the Validator. If not provided, default settings will be used.
+
+        Returns:
+            None
+        """
         super().__init__()
-        self.settings = settings or ValidatorSettings()
-        self.key = key
+        self.settings: ValidatorSettings = config or ValidatorSettings()
+        self.key: Keypair = key
         self.c_client = CommuneClient(
-            get_node_url(use_testnet=self.settings.use_testnet)
+            url=get_node_url(use_testnet=self.settings.use_testnet)
         )
-        self.netuid = get_netuid(self.c_client)
+        self.netuid = get_netuid(client=self.c_client)
         self.model = CLIP()
         self.dataset = ValidationDataset()
         self.call_timeout = self.settings.call_timeout
 
-    def calculate_score(self, img: bytes, prompt: str):
+    def calculate_score(self, img: bytes, prompt: str) -> float | Literal[0]:
+        """
+        Calculates the score based on the similarity between the input image and a prompt text.
+
+        Parameters:
+            img (bytes): The input image as a byte string.
+            prompt (str): The prompt text.
+
+        Returns:
+            float | Literal[0]: The calculated score representing the similarity, or 0 if an exception occurs.
+        """
         try:
-            return self.model.get_similarity(img, prompt)
-        except Exception:
+            return self.model.get_similarity(file=img, prompt=prompt)
+        except ValueError:
             return 0
 
-    async def validate_step(self):
+    async def validate_step(self) -> None:
+        """
+        Validates a step by querying multiple miners and setting weights based on the similarity between their generated images and a prompt text.
+
+        This function performs the following steps:
+        1. Retrieves the queryable miners' information.
+        2. Retrieves the validation input.
+        3. Generates the image generation task for each miner using a partial function.
+        4. Executes the image generation tasks concurrently using a ThreadPoolExecutor.
+        5. Calculates the similarity score between each miner's generated image and the prompt text for each miner.
+        6. Adjusts the similarity scores to a sigmoid distribution.
+        7. Calculates the weighted scores based on the adjusted similarity scores.
+        8. Sets the weights for each miner using the CommuneClient.
+
+        Parameters:
+            None
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: If there is an error setting the weights.
+
+        """
         score_dict = dict()
         modules_info = self.get_queryable_miners()
 
-        input = self.get_validate_input()
-        logger.debug("input:", input)
-        get_miner_generation = partial(self.get_miner_generation, input=input)
+        validation_input: SampleInput = self.get_validate_input()
+        logger.debug("input:", validation_input)
+        get_miner_generation = partial(
+            self.get_miner_generation, input=validation_input
+        )
         with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-            it = executor.map(get_miner_generation, modules_info.values())
-            miner_answers = [*it]
+            it: Iterator[bytes] = executor.map(
+                get_miner_generation, modules_info.values()
+            )
+            miner_answers: list[bytes] = [*it]
 
         for uid, miner_response in zip(modules_info.keys(), miner_answers):
-            miner_answer = miner_response
+            miner_answer: bytes = miner_response
             if not miner_answer:
                 logger.debug(f"Skipping miner {uid} that didn't answer")
                 continue
-            score = self.calculate_score(miner_answer, input.prompt)
+            score: float | Literal[0] = self.calculate_score(miner_answer, input.prompt)
             score_dict[uid] = score
 
         if not score_dict:
             logger.info("score_dict empty, skip set weights")
             return
         logger.debug("original scores:", score_dict)
-        adjsuted_to_sigmoid = threshold_sigmoid_reward_distribution(
+        adjusted_to_sigmoid: dict[int, float] = threshold_sigmoid_reward_distribution(
             score_dict=score_dict
         )
-        logger.debug("sigmoid scores:", adjsuted_to_sigmoid)
+        logger.debug("sigmoid scores:", adjusted_to_sigmoid)
         # Create a new dictionary to store the weighted scores
         weighted_scores: dict[int, int] = {}
 
         # Calculate the sum of all inverted scores
-        scores = sum(adjsuted_to_sigmoid.values())
+        scores: float | Literal[0] = sum(adjusted_to_sigmoid.values())
 
         # Iterate over the items in the score_dict
-        for uid, score in adjsuted_to_sigmoid.items():
+        for uid, score in adjusted_to_sigmoid.items():
             # Calculate the normalized weight as an integer
             weight = int(score * 1000 / scores)
 
@@ -101,23 +143,41 @@ class Validator(BaseValidator, Module):
             self.c_client.vote(
                 key=self.key, uids=uids, weights=weights, netuid=self.netuid
             )
-        except Exception as e:
+        except ValueError as e:
             logger.error(e)
 
-    def get_validate_input(self):
+    def get_validate_input(self) -> SampleInput:
+        """
+        Returns a SampleInput object with a randomly selected prompt from the dataset and 2 steps.
+
+        :return: A SampleInput object.
+        :rtype: SampleInput
+        """
         return SampleInput(
             prompt=self.dataset.random_prompt(),
             steps=2,
         )
 
     def validation_loop(self) -> None:
-        settings = self.settings
+        """
+        Runs a validation loop indefinitely.
+
+        This function continuously runs a validation loop, executing the `validate_step` method asynchronously.
+        The loop runs until the program is terminated.
+
+        Parameters:
+            self (object): The instance of the class.
+
+        Returns:
+            None
+        """
+        config: ValidatorSettings = self.settings
         while True:
-            start_time = time.time()
+            start_time: float = time.time()
             asyncio.run(self.validate_step())
-            elapsed = time.time() - start_time
-            if elapsed < settings.iteration_interval:
-                sleep_time = settings.iteration_interval - elapsed
+            elapsed: float = time.time() - start_time
+            if elapsed < config.iteration_interval:
+                sleep_time: float = settings.iteration_interval - elapsed
                 logger.info(f"Sleeping for {sleep_time}")
                 time.sleep(sleep_time)
 
@@ -125,5 +185,5 @@ class Validator(BaseValidator, Module):
 if __name__ == "__main__":
     settings = ValidatorSettings(use_testnet=True)
     Validator(
-        key=classic_load_key("mosaic-validator0"), settings=settings
+        key=classic_load_key(name="mosaic-validator0"), config=settings
     ).validation_loop()
