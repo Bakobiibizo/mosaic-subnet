@@ -40,29 +40,24 @@ class Validator(BaseValidator, Module):
         super().__init__()
         self.settings: ValidatorSettings = config or ValidatorSettings()
         self.key: Keypair = key
-        self.module: Module = self.dynamic_import()
+        self.module = self.dynamic_import()
         self.c_client = CommuneClient(
             url=get_node_url(use_testnet=self.settings.use_testnet)
         )
         self.netuid = get_netuid(client=self.c_client)
-        self.model = CLIP()
         self.dataset = ValidationDataset()
         self.call_timeout: int = self.settings.call_timeout
 
-    def dynamic_import(self) -> Module:
+    def dynamic_import(self):
         try:
             module_name, class_name = self.settings.module_path.rsplit(
                 sep=".", maxsplit=1
             )
-            module: module_for_loader.ModuleType = importlib.import_module(
-                name=f"mosaic_subnet/{module_name}"
-            )
+            module = importlib.import_module(name=f"mosaic_subnet/{module_name}")
             module_class: Module = getattr(module, class_name)
-        except (ImportError, AttributeError) as e:
-            logger.error(e)
+            return module_class
         except Exception as e:
             logger.error(e)
-        return module_class
 
     def calculate_score(self, img: bytes, prompt: str) -> float | Literal[0]:
         """
@@ -76,6 +71,7 @@ class Validator(BaseValidator, Module):
             float | Literal[0]: The calculated score representing the similarity, or 0 if an exception occurs.
         """
         try:
+            self.model = CLIP()
             return self.model.get_similarity(file=img, prompt=prompt)
         except ValueError:
             return 0
