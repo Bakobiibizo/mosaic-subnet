@@ -28,9 +28,7 @@ class CLIP(Module, nn.Module):
         self.model_name: str = model_name
         logger.info(self.model_name)
 
-        self.device = torch.device(
-            device="cuda" if torch.cuda.is_available() else "cpu"
-        )
+        self.device = torch.device(device="cuda")
 
         self.model: CLIPModel = CLIPModel.from_pretrained(
             pretrained_model_name_or_path=model_name
@@ -114,7 +112,7 @@ class CLIP(Module, nn.Module):
                     )
                     model_outputs = self._forward(model_inputs, **forward_params)
                     model_outputs = self._ensure_tensor_on_device(
-                        model_outputs, device=torch.device("cpu")
+                        model_outputs, device=torch.device("cuda")
                     )
             else:
                 raise ValueError(f"Framework {self.framework} is not supported")
@@ -140,9 +138,7 @@ class NSFWChecker(Module):
         """
         super().__init__()
         self.model_name = "Falconsai/nsfw_image_detection"
-        self.device = torch.device(
-            device="cuda" if torch.cuda.is_available() else "cpu"
-        )
+        self.device = torch.device(device="cuda")
         self.classifier: Pipeline = pipeline(
             task="image-classification",
             model="Falconsai/nsfw_image_detection",

@@ -34,7 +34,7 @@ class BaseValidator:
         self.call_timeout = 60
         self.c_client = CommuneClient(url=get_node_url(use_testnet=False))
         self.netuid = 14
-        self.key = "agent.ArtificialValidator"
+        self.key = ""
         self.ss58_address: Ss58Address
 
     def get_miner_generation(

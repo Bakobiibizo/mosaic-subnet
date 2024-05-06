@@ -7,7 +7,7 @@ client = CommuneClient(get_node_url())
 client.compose_call(
     module="SubnetParams",
     fn="SubnetParams",
-    key=classic_load_key("agent.ArtificialValidator"),
+    key=classic_load_key(""),
     params=[0],
     wait_for_finalization=False,
     wait_for_inclusion=False,

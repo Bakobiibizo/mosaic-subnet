@@ -29,9 +29,7 @@ class DiffUsers(Module):
         """
         super().__init__()
         self.model_name: str = model_name
-        self.device = torch.device(
-            device="cuda" if torch.cuda.is_available() else "mps"
-        )
+        self.device = torch.device(device="cuda")
         self.pipeline: StableDiffusionXLPipeline = (
             AutoPipelineForText2Image.from_pretrained(
                 pretrained_model_or_path=model_name,

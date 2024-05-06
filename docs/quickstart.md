@@ -45,9 +45,9 @@ You need to install the following components to meet the requirements for runnin
 docker run --gpus=all -d --network host --restart always \
 -v $HOME/.commune:/root/.commune \
 -v $HOME/.cache/huggingface:/root/.cache/huggingface \
---name mosaic-miner \
-mos4ic/mosaic-subnet:latest \
-python mosaic_subnet/cli.py [--testnet] [--log-level=INFO] miner <your_commune_key> <host> <port>
+--name agent.ArtificialMiner \
+mos4ic/mosaic:latest \
+python mosaic_subnet/cli.py miner agent.ArtificialMiner "66.226.79.190" 50051
 ```
 
 
@@ -56,9 +56,9 @@ python mosaic_subnet/cli.py [--testnet] [--log-level=INFO] miner <your_commune_k
 docker run --gpus=all -d --network host --restart always \
 -v $HOME/.commune:/root/.commune \
 -v $HOME/.cache/huggingface:/root/.cache/huggingface \
---name mosaic-validator \
-mos4ic/mosaic-subnet:latest \
-python mosaic_subnet/cli.py [--testnet] [--log-level=INFO] validator <your_commune_key>
+--name agent.ArtificialValidator \
+mos4ic/mosaic:latest \
+python mosaic_subnet/cli.py  agent.ArtificialValidator agent.ArtificialValidator
 ```
 
 ### Enable auto upgrade
