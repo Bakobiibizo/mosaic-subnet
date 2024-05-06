@@ -34,7 +34,7 @@ class BaseValidator:
         self.call_timeout = 60
         self.c_client = CommuneClient(url=get_node_url(use_testnet=False))
         self.netuid = 14
-        self.key = Keypair()
+        self.key = "agent.ArtificialValidator"
         self.ss58_address: Ss58Address
 
     def get_miner_generation(
@@ -141,8 +141,11 @@ class BaseValidator:
         weight_map = {}
         for uid, score in modules_weights.items():
             v = weight_map.get(uid, 0)
-            weight_map[uid] = v + score
-        logger.debug(weight_map)
+            score_total = 0
+            for s in score:
+                score_total += s[1]
+            logger.debug(weight_map)
+            weight_map[uid] = v + score_total
         candidates = heapq.nlargest(n=k, iterable=weight_map.items(), key=itemgetter(1))
 
         modules_addresses: dict[int, str] = self.c_client.query_map_address(

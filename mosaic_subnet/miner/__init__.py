@@ -2,16 +2,17 @@ from fastapi import FastAPI
 import uvicorn
 from loguru import logger
 from typing import Optional
-
+import importlib
+from importlib.util import module_for_loader
 from communex.client import CommuneClient
 from substrateinterface import Keypair
 from communex.compat.key import classic_load_key
 from communex._common import get_node_url
-from communex.module.server import ModuleServer
+from communex.module.server import ModuleServer, Module
 
-from mosaic_subnet.miner.model import DiffUsers
-from mosaic_subnet.miner._config import MinerSettings
-from mosaic_subnet.base.utils import get_netuid
+from ..miner.model import DiffUsers
+from ..miner._config import MinerSettings
+from ..base.utils import get_netuid
 
 
 class Miner(DiffUsers):
@@ -31,10 +32,26 @@ class Miner(DiffUsers):
         super().__init__()
         self.settings: MinerSettings = config or MinerSettings()
         self.key: Keypair = key
+        self.module: Module = self.dynamic_import()
         self.c_client = CommuneClient(
             url=get_node_url(use_testnet=self.settings.use_testnet)
         )
         self.netuid: int = get_netuid(client=self.c_client)
+
+    def dynamic_import(self) -> Module:
+        try:
+            module_name, class_name = self.settings.module_path.rsplit(
+                sep=".", maxsplit=1
+            )
+            module: module_for_loader.ModuleType = importlib.import_module(
+                name=f"mosaic_subnet/{module_name}"
+            )
+            module_class: Module = getattr(module, class_name)
+        except (ImportError, AttributeError) as e:
+            logger.error(e)
+        except Exception as e:
+            logger.error(e)
+        return module_class
 
     def serve(self) -> None:
         """
@@ -51,7 +68,9 @@ class Miner(DiffUsers):
             None
         """
         server = ModuleServer(
-            module=self, key=self.key, subnets_whitelist=[self.netuid]
+            module=self.module or self,
+            key=self.key,
+            subnets_whitelist=[self.netuid],
         )
         app: FastAPI = server.get_fastapi_app()
         uvicorn.run(app=app, host=str(self.settings.host), port=int(self.settings.port))
@@ -62,5 +81,9 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=7777,
         use_testnet=True,
+        key_name="module",
+        module_path="miner.Miner",
     )
-    Miner(key=classic_load_key(name="mosaic-miner0"), config=configuration).serve()
+    Miner(
+        key=classic_load_key(name=configuration.key_name), config=configuration
+    ).serve()

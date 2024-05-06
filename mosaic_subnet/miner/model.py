@@ -3,6 +3,7 @@ from typing import Optional
 import base64
 from PIL.Image import Image
 
+
 import torch
 from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
 from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (

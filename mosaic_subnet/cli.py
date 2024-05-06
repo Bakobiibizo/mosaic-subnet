@@ -55,9 +55,20 @@ def main(
 @cli.command(name="validator")
 def validator(
     ctx: typer.Context,
-    commune_key: Annotated[
-        str, typer.Argument(help="Name of the key present in `~/.commune/key`")
+    key_name: Annotated[
+        str,
+        typer.Argument(
+            help="Name of the key. Provided in this format: ~/.commune/key/<key_name>.json"
+        ),
     ],
+    module_path: Annotated[
+        str,
+        typer.Argument(
+            help="name of the file and classname of the module. Provided in this format: <file_name>.<class_name>"
+        ),
+    ],
+    host: Annotated[str, typer.Argument(help="Host ip of the validator")],
+    port: Annotated[int, typer.Argument(help="Port of the validator")],
     call_timeout: int = 60,
     iteration_interval: int = 60,
 ) -> None:
@@ -66,7 +77,7 @@ def validator(
 
     Args:
         ctx (typer.Context): The context object for the CLI command.
-        commune_key (str): The name of the key present in `~/.commune/key`.
+        key_name (str): The name of the key present in `~/.commune/key`.
         call_timeout (int, optional): The timeout value for calls in seconds. Defaults to 60.
         iteration_interval (int, optional): The interval between iterations in seconds. Defaults to 60.
 
@@ -77,18 +88,29 @@ def validator(
         use_testnet=ctx.obj.use_testnet,
         iteration_interval=iteration_interval,
         call_timeout=call_timeout,
+        module_path=module_path,
+        key_name=key_name,
+        host=host,
+        port=port,
     )
-    mosaic_validator = Validator(
-        key=classic_load_key(name=commune_key), config=settings
-    )
+    mosaic_validator = Validator(key=classic_load_key(name=key_name), config=settings)
     mosaic_validator.validation_loop()
 
 
 @cli.command(name="miner")
 def miner(
     ctx: typer.Context,
-    commune_key: Annotated[
-        str, typer.Argument(help="Name of the key present in `~/.commune/key`")
+    key_name: Annotated[
+        str,
+        typer.Argument(
+            help="Name of the key. Provided in this format: ~/.commune/key/<key_name>.json"
+        ),
+    ],
+    module_path: Annotated[
+        str,
+        typer.Argument(
+            help="name of the file and classname of the module. Provided in this format: <file_name>.<class_name>"
+        ),
     ],
     host: Annotated[
         str,
@@ -104,7 +126,7 @@ def miner(
 
     Args:
         ctx (typer.Context): The context object for the CLI command.
-        commune_key (str): Name of the key present in `~/.commune/key`.
+        key_name (str): Name of the key present in `~/.commune/key`.
         host (str): The public IP address to register, use "0.0.0.0" to allow all incoming requests.
         port (int): The port number.
         testnet (bool, optional): Flag to indicate if testnet should be used. Defaults to False.
@@ -113,20 +135,27 @@ def miner(
         None
     """
     settings = MinerSettings(
-        use_testnet=ctx.obj.use_testnet or testnet, host=host, port=port
+        use_testnet=testnet or ctx.obj.use_testnet,
+        host=host,
+        port=port,
+        module_path=module_path,
+        key_name=key_name,
     )
-    mosaic_miner = Miner(key=classic_load_key(name=commune_key), config=settings)
+    mosaic_miner = Miner(key=classic_load_key(name=key_name), config=settings)
     mosaic_miner.serve()
 
 
 @cli.command(name="gateway")
 def gateway(
     ctx: typer.Context,
-    commune_key: Annotated[
+    key_name: Annotated[
         str, typer.Argument(help="Name of the key present in `~/.commune/key`")
     ],
+    module_path: Annotated[
+        str, typer.Argument(help="name of the file and classname of the module")
+    ],
     host: Annotated[str, typer.Argument(help="host")],
-    port: Annotated[int, typer.Argument(help="port")],
+    port: Annotated[int, typer.Argument(help="port of the gateway")],
     testnet: bool = False,
     call_timeout: int = 65,
 ) -> None:
@@ -135,7 +164,7 @@ def gateway(
 
     Args:
         ctx (typer.Context): The context object for the CLI command.
-        commune_key (str): Name of the key present in `~/.commune/key`.
+        key_name (str): Name of the key present in `~/.commune/key`.
         host (str): The host.
         port (int): The port number.
         testnet (bool, optional): Flag to indicate if testnet should be used. Defaults to False.
@@ -148,11 +177,13 @@ def gateway(
         use_testnet=ctx.obj.use_testnet or testnet,
         host=host,
         port=port,
+        module_path=module_path,
+        key_name=key_name,
         call_timeout=call_timeout,
     )
-    mosaic_gateway = Gateway(key=classic_load_key(name=commune_key), config=settings)
+    mosaic_gateway = Gateway(key=classic_load_key(name=key_name), config=settings)
     mosaic_gateway.sync_loop()
-    uvicorn.run(app=app, host=settings.host, port=settings.port)
+    uvicorn.run(app=app, host=str(settings.host), port=int(str(settings.port)))
 
 
 if __name__ == "__main__":

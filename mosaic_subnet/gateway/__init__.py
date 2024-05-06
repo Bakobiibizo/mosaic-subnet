@@ -1,22 +1,26 @@
-import random
+import re
 import time
 import threading
 import uvicorn
+import random
+import importlib
+from importlib.util import module_for_loader
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from substrateinterface import Keypair
 from loguru import logger
+from typing import Optional
 
+from communex.types import Ss58Address
 from communex.client import CommuneClient
 from communex._common import get_node_url
-from communex.compat.key import classic_load_key
+from communex.compat.key import local_key_addresses
 
-from mosaic_subnet.base.utils import (
-    get_netuid,
-)
-from mosaic_subnet.base import SampleInput, BaseValidator
-from mosaic_subnet.gateway._config import GatewaySettings
+
+from ..base import SampleInput, BaseValidator
+from ..gateway._config import GatewaySettings
+import uuid
 
 
 app = FastAPI()
@@ -29,11 +33,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+MOSAIC_MODULE_KEY = "5DofQSnXnWjF1VUzYVzTQV658GeBExrVFEQ5B4k8Tr1LcBzb"
+MOSAIC_NETUID = 14
+
+configuration = GatewaySettings()
+
 
 class Gateway(BaseValidator):
     """Base class for the Gateway Validator/"""
 
-    def __init__(self, key: Keypair, config: GatewaySettings) -> None:
+    def __init__(
+        self, key: Optional[Keypair], config: Optional[GatewaySettings]
+    ) -> None:
         """
         Initializes a new instance of the Gateway class.
 
@@ -47,14 +58,30 @@ class Gateway(BaseValidator):
         super().__init__()
         self.settings = config or GatewaySettings()
         self.c_client = CommuneClient(
-            get_node_url(use_testnet=self.settings.use_testnet)
+            url=get_node_url(use_testnet=self.settings.use_testnet)
         )
-        self.key = key
-        self.netuid = get_netuid(self.c_client)
-        self.call_timeout = self.settings.call_timeout
+        self.key: Keypair = key
+        self.netuid = MOSAIC_NETUID
+        self.call_timeout: int = self.settings.call_timeout
         self.top_miners = {}
         self.sync()
         self._loop_thread = None
+        self.ss58_address = self.settings.get_ss58_address("agent.ArtificialGateway")
+
+    def dynamic_import(self):
+        try:
+            module_name, class_name = str(self.settings.module_path).rsplit(
+                sep=".", maxsplit=1
+            )
+            module: module_for_loader.ModuleType = importlib.import_module(
+                name=f"mosaic_subnet/{module_name}"
+            )
+            module_class = getattr(module, class_name)
+        except (ImportError, AttributeError) as e:
+            logger.error(e)
+        except Exception as e:
+            logger.error(e)
+        return module_class
 
     def sync(self):
         """
@@ -119,22 +146,6 @@ class Gateway(BaseValidator):
         return self.top_miners
 
 
-def get_validator(validator_name="mosaic-validator0") -> Gateway:
-    """
-    Returns a Gateway object for the validator with the given name.
-
-    Parameters:
-        validator_name (str): The name of the validator. Defaults to "mosaic-validator0".
-
-    Returns:
-        Gateway: The Gateway object for the validator.
-    """
-    return Gateway(key=classic_load_key(name=validator_name), config=GatewaySettings())
-
-
-validator: Gateway = get_validator()
-
-
 @app.post(
     "/generate",
     responses={200: {"content": {"image/png": {}}}},
@@ -156,12 +167,14 @@ def generate_image(req: SampleInput):
         None
 
     """
+    config = GatewaySettings()
+    gateway = Gateway(key=config.key_name, config=config)  # type: ignore
+    miners: dict[int, tuple[list[str], Ss58Address]] = gateway.get_queryable_miners()
     result = b""
-    for _ in range(3):
-        top_miners = validator.get_top_miners()
-        mid = random.choice(list(top_miners.keys()))
-        module = top_miners[mid]
-        result = validator.get_miner_generation(module, req)
+    for _ in range(10):
+        mid = random.choice(list(miners.keys()))
+        module: tuple[list[str], Ss58Address] = miners[mid]
+        result = gateway.get_miner_generation(miner_info=module, miner_input=req)
         if result:
             break
     return Response(content=result, media_type="image/png")
@@ -172,7 +185,9 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8080,
         use_testnet=True,
+        key_name="agent.ArtificialGateway",
+        module_path="agent.ArtificialGateway",
     )
-    validator = Gateway(key=classic_load_key("mosaic-validator0"), config=settings)
+    validator = Gateway(key=settings.ss58Address, config=settings)  # type: ignore
     validator.start_sync_loop()
-    uvicorn.run(app=app, host=settings.host, port=settings.port)
+    uvicorn.run(app=app, host=settings.host, port=settings.port)  # type: ignore

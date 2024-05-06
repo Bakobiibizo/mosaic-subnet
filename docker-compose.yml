@@ -1,0 +1,42 @@
+version: 1.0.0
+services:
+  ArtificialGateway:
+    build: .
+    working_dir: /app
+    image: mosaic:latest
+    command: 
+      - python 
+      - -m
+      - mosaic_subnet.cli
+      - gateway
+      - agent.ArtificialValidator 
+      - agent.ArtificialValidator 
+      - "66.226.79.190" 
+      - "50050"
+    ports: 
+    - 50050:50050
+    volumes:
+      - .:/app
+      - /home/bakobi/.cache/huggingface:/root/.cache/huggingface
+      - /home/bakobi/.commune:/root/.commune
+    environment:
+      - PYTHONFAULTHANDLER=1 
+      - PYTHONUNBUFFERED=1 
+      - PYTHONHASHSEED=random 
+      - PIP_NO_CACHE_DIR=off 
+      - PIP_DISABLE_PIP_VERSION_CHECK=on 
+      - PIP_DEFAULT_TIMEOUT=100 
+      - POETRY_NO_INTERACTION=1 
+      - POETRY_VIRTUALENVS_CREATE=false 
+      - POETRY_CACHE_DIR='/var/cache/pypoetry' 
+      - POETRY_HOME='/usr/local' 
+      - POETRY_VERSION=1.8.2
+      - CUDA_VISIBLE_DEVICES=0
+    restart: on-failure
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+              count: 1

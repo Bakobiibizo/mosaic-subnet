@@ -7,6 +7,8 @@ class MosaicBaseSettings(BaseSettings):
 
     use_testnet: bool = False
     call_timeout: int = 60
+    module_path: str
+    key_name: str
 
 
 class AccessControl(BaseSettings):

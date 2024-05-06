@@ -6,18 +6,21 @@ from functools import partial
 from loguru import logger
 from typing import Iterator, Literal
 from substrateinterface import Keypair
+import importlib
+from importlib.util import module_for_loader
 
 from communex.module.module import Module
 from communex.client import CommuneClient
 from communex._common import get_node_url
+from communex.types import Ss58Address
 from communex.compat.key import classic_load_key
 
-from mosaic_subnet.validator._config import ValidatorSettings
-from mosaic_subnet.validator.model import CLIP
-from mosaic_subnet.base.utils import get_netuid
-from mosaic_subnet.base import SampleInput, BaseValidator
-from mosaic_subnet.validator.dataset import ValidationDataset
-from mosaic_subnet.validator.sigmoid import threshold_sigmoid_reward_distribution
+from ..validator._config import ValidatorSettings
+from ..validator.model import CLIP
+from ..base.utils import get_netuid
+from ..base import SampleInput, BaseValidator
+from ..validator.dataset import ValidationDataset
+from ..validator.sigmoid import threshold_sigmoid_reward_distribution
 
 
 class Validator(BaseValidator, Module):
@@ -37,13 +40,29 @@ class Validator(BaseValidator, Module):
         super().__init__()
         self.settings: ValidatorSettings = config or ValidatorSettings()
         self.key: Keypair = key
+        self.module: Module = self.dynamic_import()
         self.c_client = CommuneClient(
             url=get_node_url(use_testnet=self.settings.use_testnet)
         )
         self.netuid = get_netuid(client=self.c_client)
         self.model = CLIP()
         self.dataset = ValidationDataset()
-        self.call_timeout = self.settings.call_timeout
+        self.call_timeout: int = self.settings.call_timeout
+
+    def dynamic_import(self) -> Module:
+        try:
+            module_name, class_name = self.settings.module_path.rsplit(
+                sep=".", maxsplit=1
+            )
+            module: module_for_loader.ModuleType = importlib.import_module(
+                name=f"mosaic_subnet/{module_name}"
+            )
+            module_class: Module = getattr(module, class_name)
+        except (ImportError, AttributeError) as e:
+            logger.error(e)
+        except Exception as e:
+            logger.error(e)
+        return module_class
 
     def calculate_score(self, img: bytes, prompt: str) -> float | Literal[0]:
         """
@@ -171,13 +190,12 @@ class Validator(BaseValidator, Module):
         Returns:
             None
         """
-        config: ValidatorSettings = self.settings
         while True:
             start_time: float = time.time()
             asyncio.run(self.validate_step())
             elapsed: float = time.time() - start_time
-            if elapsed < config.iteration_interval:
-                sleep_time: float = settings.iteration_interval - elapsed
+            if elapsed < self.settings.iteration_interval:
+                sleep_time: float = self.settings.iteration_interval - elapsed
                 logger.info(f"Sleeping for {sleep_time}")
                 time.sleep(sleep_time)
 
@@ -185,5 +203,5 @@ class Validator(BaseValidator, Module):
 if __name__ == "__main__":
     settings = ValidatorSettings(use_testnet=True)
     Validator(
-        key=classic_load_key(name="mosaic-validator0"), config=settings
+        key=classic_load_key(name="validator.Validator"), config=settings
     ).validation_loop()
