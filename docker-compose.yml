@@ -41,7 +41,7 @@ services:
               capabilities: [gpu]
               device_ids:
                 - "7"
-  artificialminer:
+  artificialvalidator:
     build: .
     working_dir: /app
     command: 
@@ -49,12 +49,12 @@ services:
       - -m
       - mosaic_subnet.cli
       - miner
-      - agent.ArtificialMiner
-      - agent.ArtificialMiner
+      - agent.ArtificialMiner_7
+      - agent.ArtificialMiner_7
       - "0.0.0.0" 
-      - "50056"
+      - "50057"
     ports: 
-    - 50056:50056
+    - 50057:50057
     volumes:
       - .:/app
       - /home/bakobi/.cache/huggingface:/root/.cache/huggingface
@@ -71,7 +71,7 @@ services:
       - POETRY_CACHE_DIR='/var/cache/pypoetry' 
       - POETRY_HOME='/usr/local' 
       - POETRY_VERSION=1.8.2
-      - CUDA_VISIBLE_DEVICES=6
+      - CUDA_VISIBLE_DEVICES=7
       - CUDA_DOCKER_ARCH=compute_90
       - CUDA_MODULE_LOADING=LAZY
     restart: on-failure
@@ -91,8 +91,8 @@ services:
       - -m
       - mosaic_subnet.cli
       - miner
-      - agent.ArtificialMiner
-      - agent.ArtificialMiner
+      - agent.ArtificialMiner_6
+      - agent.ArtificialMiner_6
       - "0.0.0.0" 
       - "50056"
     ports: 
@@ -172,7 +172,6 @@ services:
   artificialminer_2:
     build: .
     working_dir: /app
-    image: mosaic:latest
     command: 
       - python 
       - -m
@@ -216,7 +215,6 @@ services:
   artificialminer_3:
     build: .
     working_dir: /app
-    image: mosaic:latest
     command: 
       - python 
       - -m
@@ -260,7 +258,6 @@ services:
   artificialminer_4:
     build: .
     working_dir: /app
-    image: mosaic:latest
     command: 
       - python 
       - -m
@@ -304,7 +301,6 @@ services:
   artificialminer_5:
     build: .
     working_dir: /app
-    image: mosaic:latest
     command: 
       - python 
       - -m

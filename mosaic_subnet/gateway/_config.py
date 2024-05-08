@@ -1,19 +1,20 @@
-from ..base.config import MosaicBaseSettings
+import re
+from mosaic_subnet.base.base import ModuleSettings
 from communex._common import get_node_url
-from communex.compat.key import Ss58Address, local_key_addresses
+from communex.compat.key import Ss58Address
 from typing import Optional
 
 
-class GatewaySettings(MosaicBaseSettings):
-    """Configuration settings for the basic Gateway."""
+class GatewaySettings(ModuleSettings):
+    """Configuration settings for the Gateway."""
 
-    host: Optional[str] = "0.0.0.0"
-    port: Optional[int] = 8080
-    module_path: Optional[str] = "agent.ArtificialGateway"
-    key_name: Optional[str] = "agent.ArtificialGateway"
-
-    def get_ss58_address(self, key_name: str):
-        local_keys = local_key_addresses()
-        if not key_name:
-            raise ValueError("No key_name provided")
-        return local_keys[key_name]
+    module_path: str = "gateway.Gateway"
+    key_name: str = "gateway.Gateway"
+    host: str = "0.0.0.0"
+    port: int = 8080
+    use_testnet: bool = False
+    call_timeout: int = 60
+    ss58_address: Optional[Ss58Address] = None
+    IP_REGEX: re.Pattern[str] = re.compile(
+        pattern=r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+"
+    )

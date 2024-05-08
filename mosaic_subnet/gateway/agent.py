@@ -1,5 +1,5 @@
-from ..gateway import Gateway
-from ._config import GatewaySettings
+from mosaic_subnet.gateway.gateway import Gateway
+from mosaic_subnet.gateway._config import GatewaySettings
 from communex.compat.key import Keypair
 
 settings = GatewaySettings(

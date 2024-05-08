@@ -1,15 +1,14 @@
-from ..validator import Validator
-from ..validator.model import CLIP
-from ..validator._config import ValidatorSettings
-from communex.compat.key import Keypair
+from mosaic_subnet.validator.validator import Validator
+from mosaic_subnet.validator._config import ValidatorSettings
 
-config = ValidatorSettings(
-    host="66.226.79.190",
-    port=50050,
-    module_path="agent.ArtificialValidator",
+settings = ValidatorSettings(
     key_name="agent.ArtificialValidator",
-    use_testnet=False,
+    module_path="validator.ArtificialValidator",
+    host="0.0.0.0",
+    port=7777,
+    iteration_interval=60,
+    use_testnet=True,
 )
-ss58_address = config.get_ss58_address(config.key_name)
 
-ArtificialValidator = Validator(key=Keypair(ss58_address=ss58_address), config=config)
+
+AritificialValidator = Validator(**settings.model_dump())

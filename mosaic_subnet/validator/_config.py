@@ -1,4 +1,4 @@
-from mosaic_subnet.base.config import MosaicBaseSettings
+from mosaic_subnet.base._config import MosaicBaseSettings
 from communex.compat.key import local_key_addresses
 
 

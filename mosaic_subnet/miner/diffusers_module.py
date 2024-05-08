@@ -14,12 +14,12 @@ from torch import Generator
 from communex.module.module import Module, endpoint
 
 
-class DiffUsers(Module):
-    """Implementation of the Diffusers pipeline from the Hugging Face library."""
+class DiffusersModule(Module):
+    """Implementation of the DiffusersModule pipeline from the Hugging Face library."""
 
     def __init__(self, model_name: str = "Lykon/dreamshaper-xl-v2-turbo") -> None:
         """
-        Initializes the DiffUsers class with the specified model_name.
+        Initializes the DiffusersModule class with the specified model_name.
 
         Parameters:
             model_name (str, optional): The name of the model to use. Defaults to "Lykon/dreamshaper-xl-v2-turbo".
@@ -86,7 +86,7 @@ class DiffUsers(Module):
 
 
 if __name__ == "__main__":
-    d = DiffUsers()
+    d = DiffusersModule()
     out: str = d.sample(prompt="cat, jumping")
     with open("a.png", "wb") as f:
         f.write(out.encode())

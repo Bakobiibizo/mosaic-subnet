@@ -6,9 +6,11 @@ from loguru import logger
 from typing import Annotated
 from dataclasses import dataclass
 from communex.compat.key import classic_load_key
-from mosaic_subnet.validator import Validator, ValidatorSettings
-from mosaic_subnet.miner import Miner, MinerSettings
-from mosaic_subnet.gateway import app, Gateway, GatewaySettings
+from mosaic_subnet.validator.validator import Validator
+from mosaic_subnet.miner.agent import Miner
+from mosaic_subnet.gateway.gateway import app, GatewaySettings, Gateway
+from mosaic_subnet.base.base import ModuleSettings
+from mosaic_subnet.miner.miner import MinerSettings
 
 cli = typer.Typer()
 sys.path.append(os.getcwd())
@@ -70,7 +72,6 @@ def validator(
     host: Annotated[str, typer.Argument(help="Host ip of the validator")],
     port: Annotated[int, typer.Argument(help="Port of the validator")],
     call_timeout: int = 60,
-    iteration_interval: int = 60,
 ) -> None:
     """
     A command-line interface (CLI) command function that runs a validation loop for a validator.
@@ -84,9 +85,8 @@ def validator(
     Returns:
         None
     """
-    settings = ValidatorSettings(
+    settings = ModuleSettings(
         use_testnet=ctx.obj.use_testnet,
-        iteration_interval=iteration_interval,
         call_timeout=call_timeout,
         module_path=module_path,
         key_name=key_name,
@@ -141,7 +141,7 @@ def miner(
         module_path=module_path,
         key_name=key_name,
     )
-    mosaic_miner = Miner(key=classic_load_key(name=key_name), config=settings)
+    mosaic_miner = Miner(config=settings)
     mosaic_miner.serve()
 
 
@@ -181,7 +181,7 @@ def gateway(
         key_name=key_name,
         call_timeout=call_timeout,
     )
-    mosaic_gateway = Gateway(key=classic_load_key(name=key_name), config=settings)
+    mosaic_gateway = Gateway(config=settings)
     mosaic_gateway.sync_loop()
     uvicorn.run(app=app, host=str(settings.host), port=int(str(settings.port)))
 

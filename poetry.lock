@@ -31,6 +31,17 @@ test-trackers = ["comet-ml", "dvclive", "tensorboard", "wandb"]
 testing = ["bitsandbytes", "datasets", "deepspeed", "evaluate", "parameterized", "pytest (>=7.2.0,<=8.0.0)", "pytest-subtests", "pytest-xdist", "scikit-learn", "scipy", "timm", "torchpippy (>=0.2.0)", "tqdm", "transformers"]
 
 [[package]]
+name = "aiofiles"
+version = "23.2.1"
+description = "File support for asyncio."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "aiofiles-23.2.1-py3-none-any.whl", hash = "sha256:19297512c647d4b27a2cf7c34caa7e405c0d60b5560618a29a9fe027b18b0107"},
+    {file = "aiofiles-23.2.1.tar.gz", hash = "sha256:84ec2218d8419404abcb9f0c02df3f34c6e0a68ed41072acfb1cef5cbc29051a"},
+]
+
+[[package]]
 name = "aiohttp"
 version = "3.9.5"
 description = "Async http client/server framework (asyncio)"
@@ -433,17 +444,6 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7
 files = [
     {file = "colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"},
     {file = "colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44"},
-]
-
-[[package]]
-name = "commune"
-version = "0.0.1"
-description = "A system to simulate communal interaction in video games."
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "commune-0.0.1-py3-none-any.whl", hash = "sha256:7a267cef97e6e1e1c5a27d2da937d75bc10a30ddc28e5038e7c305b3e2dcc62b"},
-    {file = "commune-0.0.1.tar.gz", hash = "sha256:c76de80ac0b178a66a9c2058e367581b7e9984456562fbb460a9d5126c765afe"},
 ]
 
 [[package]]
@@ -3622,4 +3622,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "9f2584fe24312adb6be1f97e13383590f607059145298f4d424640c69de2d71e"
+content-hash = "ec99b1ec4f2d1aa4617065637dcd8e4476471ae4113d948818a42372710d4de3"
